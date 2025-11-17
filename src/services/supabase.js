@@ -11,26 +11,46 @@ export const apiService = {
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1
     
-    const { data, error, count } = await supabase
-      .from('articles')
-      .select(`
-        *,
-        categories(name)
-      `, { count: 'exact' })
-      .eq('is_published', true)
-      .order('created_at', { ascending: false })
-      .range(from, to)
+    console.log('正在获取文章...', { supabaseUrl, from, to })
+    console.log('环境变量检查:', {
+      url: import.meta.env.VITE_SUPABASE_URL,
+      key: import.meta.env.VITE_SUPABASE_ANON_KEY ? '已设置' : '未设置'
+    })
     
-    if (error) throw error
-    
-    return {
-      list: data,
-      pagination: {
-        total: count,
-        pageNum: page,
-        pageSize: pageSize,
-        pages: Math.ceil(count / pageSize)
+    try {
+      const { data, error, count } = await supabase
+        .from('articles')
+        .select(`
+          *,
+          categories(name)
+        `, { count: 'exact' })
+        .eq('is_published', true)
+        .order('created_at', { ascending: false })
+        .range(from, to)
+      
+      if (error) {
+        console.error('Supabase查询错误:', error)
+        throw error
       }
+      
+      console.log('获取文章成功:', { 
+        dataLength: data?.length || 0, 
+        count,
+        firstArticle: data?.[0] 
+      })
+      
+      return {
+        list: data || [],
+        pagination: {
+          total: count || 0,
+          pageNum: page,
+          pageSize: pageSize,
+          pages: Math.ceil((count || 0) / pageSize)
+        }
+      }
+    } catch (err) {
+      console.error('获取文章异常:', err)
+      throw err
     }
   },
 

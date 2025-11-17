@@ -29,7 +29,7 @@
             <div v-else class="image-placeholder">📝</div>
           </div>
           <div class="card-content">
-            <span class="category-tag">{{ article.categories.name }}</span>
+            <span class="category-tag">{{ article.categories?.name || '未分类' }}</span>
             <h3>{{ article.title }}</h3>
             <p>{{ article.summary || article.content.substring(0, 100) + '...' }}</p>
             <div class="card-meta">
@@ -83,18 +83,33 @@ export default {
   methods: {
     async loadData() {
       try {
+        console.log('开始加载数据...')
+        
         // 加载最新文章
         const articlesData = await apiService.getArticles(1, 3)
+        console.log('Home组件获取到的文章数据:', articlesData)
         this.articles = articlesData.list
         
         // 加载分类
-        this.categories = await apiService.getCategories()
+        const categoriesData = await apiService.getCategories()
+        console.log('Home组件获取到的分类数据:', categoriesData)
+        this.categories = categoriesData
         
         // 计算统计信息
         this.totalArticles = articlesData.pagination.total
         this.totalViews = this.articles.reduce((sum, article) => sum + (article.view_count || 0), 0)
+        
+        console.log('Home组件数据加载完成:', {
+          articlesCount: this.articles.length,
+          categoriesCount: this.categories.length,
+          totalArticles: this.totalArticles,
+          totalViews: this.totalViews
+        })
       } catch (error) {
-        console.error('加载数据失败:', error)
+        console.error('Home组件加载数据失败:', error)
+        // 显示友好的错误信息
+        this.articles = []
+        this.categories = []
       }
     },
     formatDate(dateString) {

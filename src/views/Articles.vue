@@ -38,7 +38,7 @@
         </div>
         <div class="article-content">
           <div class="article-meta">
-            <span class="category">{{ article.categories.name }}</span>
+            <span class="category">{{ article.categories?.name || '未分类' }}</span>
             <span class="date">{{ formatDate(article.created_at) }}</span>
           </div>
           <h2 class="article-title">{{ article.title }}</h2>

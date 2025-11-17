@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase 连接测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .result {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Supabase 连接测试</h1>
+    <div id="results"></div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js'
+        
+        const results = document.getElementById('results')
+        
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div')
+            div.className = `result ${type}`
+            div.innerHTML = message
+            results.appendChild(div)
+        }
+        
+        function addDataResult(title, data) {
+            const div = document.createElement('div')
+            div.className = 'result info'
+            div.innerHTML = `<strong>${title}:</strong><pre>${JSON.stringify(data, null, 2)}</pre>`
+            results.appendChild(div)
+        }
+        
+        // 从环境变量或直接写入
+        const supabaseUrl = 'https://talufbfkwrdrpwbzurcu.supabase.co'
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhbHVmYmZrd3JkcnB3Ynp1cmN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNjMxODUsImV4cCI6MjA3ODkzOTE4NX0.tpBu2CSiKJo0Z-YjPcF2Oey8qyhPlinuzJA6Ld8CTo0'
+        
+        addResult('正在初始化 Supabase 客户端...', 'info')
+        
+        const supabase = createClient(supabaseUrl, supabaseAnonKey)
+        addResult('✓ Supabase 客户端初始化成功', 'success')
+        addDataResult('连接配置', { url: supabaseUrl, keySet: !!supabaseAnonKey })
+        
+        // 测试获取文章
+        async function testArticles() {
+            try {
+                addResult('正在测试获取文章...', 'info')
+                
+                const { data, error, count } = await supabase
+                    .from('articles')
+                    .select(`
+                        *,
+                        categories(name)
+                    `, { count: 'exact' })
+                    .eq('is_published', true)
+                    .order('created_at', { ascending: false })
+                    .range(0, 2)
+                
+                if (error) {
+                    addResult(`✗ 获取文章失败: ${error.message}`, 'error')
+                    addDataResult('错误详情', error)
+                } else {
+                    addResult(`✓ 成功获取文章，共 ${count} 篇`, 'success')
+                    addDataResult('文章数据', data)
+                }
+            } catch (err) {
+                addResult(`✗ 异常: ${err.message}`, 'error')
+                addDataResult('异常详情', err)
+            }
+        }
+        
+        // 测试获取分类
+        async function testCategories() {
+            try {
+                addResult('正在测试获取分类...', 'info')
+                
+                const { data, error } = await supabase
+                    .from('categories')
+                    .select('*')
+                
+                if (error) {
+                    addResult(`✗ 获取分类失败: ${error.message}`, 'error')
+                } else {
+                    addResult(`✓ 成功获取 ${data.length} 个分类`, 'success')
+                    addDataResult('分类数据', data)
+                }
+            } catch (err) {
+                addResult(`✗ 异常: ${err.message}`, 'error')
+            }
+        }
+        
+        // 运行测试
+        testArticles()
+        testCategories()
+    </script>
+</body>
+</html>

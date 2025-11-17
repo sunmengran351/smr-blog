@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase 测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+</head>
+<body>
+    <h1>Supabase 连接测试</h1>
+    <div id="results"></div>
+    
+    <script>
+        // 从环境变量获取配置
+        const supabaseUrl = 'https://talufbfkwrdrpwbzurcu.supabase.co'
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhbHVmYmZrd3JkcnB3Ynp1cmN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNjMxODUsImV4cCI6MjA3ODkzOTE4NX0.tpBu2CSiKJo0Z-YjPcF2Oey8qyhPlinuzJA6Ld8CTo0'
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey)
+        const results = document.getElementById('results')
+        
+        async function testConnection() {
+            try {
+                console.log('开始测试连接...')
+                
+                // 测试连接
+                const { data: articles, error: articlesError } = await supabase
+                    .from('articles')
+                    .select(`*, categories(name)`)
+                    .eq('is_published', true)
+                    .limit(5)
+                
+                if (articlesError) {
+                    console.error('文章查询错误:', articlesError)
+                    results.innerHTML = `<p style="color: red;">文章查询错误: ${articlesError.message}</p>`
+                } else {
+                    console.log('文章数据:', articles)
+                    results.innerHTML = `<h3>文章查询成功！找到 ${articles.length} 篇文章</h3>`
+                    results.innerHTML += `<pre>${JSON.stringify(articles, null, 2)}</pre>`
+                }
+                
+                // 测试分类查询
+                const { data: categories, error: categoriesError } = await supabase
+                    .from('categories')
+                    .select('*')
+                
+                if (categoriesError) {
+                    console.error('分类查询错误:', categoriesError)
+                } else {
+                    console.log('分类数据:', categories)
+                    results.innerHTML += `<h3>分类查询成功！找到 ${categories.length} 个分类</h3>`
+                    results.innerHTML += `<pre>${JSON.stringify(categories, null, 2)}</pre>`
+                }
+                
+            } catch (error) {
+                console.error('连接测试失败:', error)
+                results.innerHTML = `<p style="color: red;">连接测试失败: ${error.message}</p>`
+            }
+        }
+        
+        testConnection()
+    </script>
+</body>
+</html>
