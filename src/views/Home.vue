@@ -39,8 +39,16 @@
           </div>
         </article>
       </div>
+      <div v-else-if="showError" class="error-state">
+        <div class="error-message">
+          <h3>⚠️ 数据加载失败</h3>
+          <p>{{ errorMessage }}</p>
+          <button @click="loadData" class="retry-btn">重试</button>
+        </div>
+      </div>
       <div v-else class="loading">
-        <p>加载中...</p>
+        <p>🔄 正在加载文章...</p>
+        <p class="loading-hint">如果长时间未加载，请检查网络连接或联系管理员</p>
       </div>
     </section>
 
@@ -74,7 +82,9 @@ export default {
       articles: [],
       categories: [],
       totalArticles: 0,
-      totalViews: 0
+      totalViews: 0,
+      showError: false,
+      errorMessage: ''
     }
   },
   async mounted() {
@@ -83,33 +93,69 @@ export default {
   methods: {
     async loadData() {
       try {
-        console.log('开始加载数据...')
+        console.log('🔄 Home组件开始加载数据...')
+        
+        // 先显示加载状态
+        this.articles = []
+        this.categories = []
         
         // 加载最新文章
+        console.log('📝 正在获取文章数据...')
         const articlesData = await apiService.getArticles(1, 3)
-        console.log('Home组件获取到的文章数据:', articlesData)
-        this.articles = articlesData.list
+        console.log('✅ 文章数据获取成功:', articlesData)
+        
+        this.articles = articlesData.list || []
+        console.log('📄 文章列表:', this.articles.length, '篇')
         
         // 加载分类
+        console.log('🏷️ 正在获取分类数据...')
         const categoriesData = await apiService.getCategories()
-        console.log('Home组件获取到的分类数据:', categoriesData)
-        this.categories = categoriesData
+        console.log('✅ 分类数据获取成功:', categoriesData)
+        
+        this.categories = categoriesData || []
+        console.log('📋 分类列表:', this.categories.length, '个')
         
         // 计算统计信息
-        this.totalArticles = articlesData.pagination.total
+        this.totalArticles = articlesData.pagination?.total || 0
         this.totalViews = this.articles.reduce((sum, article) => sum + (article.view_count || 0), 0)
         
-        console.log('Home组件数据加载完成:', {
+        console.log('🎉 Home组件数据加载完成:', {
           articlesCount: this.articles.length,
           categoriesCount: this.categories.length,
           totalArticles: this.totalArticles,
-          totalViews: this.totalViews
+          totalViews: this.totalViews,
+          firstArticle: this.articles[0] ? {
+            id: this.articles[0].id,
+            title: this.articles[0].title,
+            category: this.articles[0].categories?.name
+          } : null
         })
+        
+        // 如果没有数据，显示更多信息
+        if (this.articles.length === 0) {
+          console.warn('⚠️ 没有找到文章，请检查：')
+          console.warn('1. 环境变量是否正确设置')
+          console.warn('2. Supabase连接是否正常')
+          console.warn('3. 数据库是否有已发布的文章')
+        }
+        
       } catch (error) {
-        console.error('Home组件加载数据失败:', error)
+        console.error('❌ Home组件加载数据失败:', error)
+        console.error('错误详情:', {
+          message: error.message,
+          status: error.status,
+          details: error.details
+        })
+        
         // 显示友好的错误信息
         this.articles = []
         this.categories = []
+        this.totalArticles = 0
+        this.totalViews = 0
+        
+        // 可以在页面上显示错误信息
+        this.showError = true
+        this.errorMessage = error.message || '数据加载失败，请刷新页面重试'
       }
     },
     formatDate(dateString) {
@@ -301,6 +347,51 @@ export default {
   text-align: center;
   padding: 3rem;
   color: #64748b;
+}
+
+.loading-hint {
+  font-size: 0.875rem;
+  color: #94a3b8;
+  margin-top: 0.5rem;
+}
+
+/* 错误状态 */
+.error-state {
+  text-align: center;
+  padding: 3rem;
+}
+
+.error-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.error-message h3 {
+  color: #dc2626;
+  margin-bottom: 1rem;
+}
+
+.error-message p {
+  color: #991b1b;
+  margin-bottom: 1.5rem;
+}
+
+.retry-btn {
+  background: #dc2626;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+
+.retry-btn:hover {
+  opacity: 0.8;
 }
 
 /* 响应式设计 */

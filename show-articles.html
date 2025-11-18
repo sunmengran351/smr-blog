@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文章内容展示</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 40px; }
+        .articles-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
+        .article-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .article-meta { display: flex; justify-content: space-between; margin-bottom: 15px; }
+        .category { background: #e0e7ff; color: #4f46e5; padding: 5px 12px; border-radius: 15px; font-size: 14px; }
+        .date { color: #64748b; font-size: 14px; }
+        .title { font-size: 1.25rem; color: #1e293b; margin-bottom: 10px; }
+        .summary { color: #64748b; margin-bottom: 15px; }
+        .views { color: #94a3b8; font-size: 14px; }
+        .loading { text-align: center; padding: 40px; color: #64748b; }
+        .error { background: #fef2f2; border: 1px solid #fecaca; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        button { background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 博客文章展示测试</h1>
+            <p>这是数据库中应该显示的文章内容</p>
+            <button onclick="loadArticles()">🔄 刷新文章</button>
+            <button onclick="checkConnection()">🔗 测试连接</button>
+        </div>
+
+        <div id="status"></div>
+        <div id="articles" class="articles-grid">
+            <div class="loading">正在加载文章...</div>
+        </div>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://talufbfkwrdrpwbzurcu.supabase.co'
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhbHVmYmZrd3JkcnB3Ynp1cmN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNjMxODUsImV4cCI6MjA3ODkzOTE4NX0.tpBu2CSiKJo0Z-YjPcF2Oey8qyhPlinuzJA6Ld8CTo0'
+
+        async function checkConnection() {
+            const status = document.getElementById('status')
+            try {
+                const response = await fetch(`${supabaseUrl}/rest/v1/categories?limit=1`, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`
+                    }
+                })
+                
+                if (response.ok) {
+                    status.innerHTML = '<div class="success">✅ Supabase连接成功！数据库可以正常访问。</div>'
+                } else {
+                    status.innerHTML = `<div class="error">❌ 连接失败: ${response.status}</div>`
+                }
+            } catch (error) {
+                status.innerHTML = `<div class="error">❌ 连接异常: ${error.message}</div>`
+            }
+        }
+
+        async function loadArticles() {
+            const articlesDiv = document.getElementById('articles')
+            const status = document.getElementById('status')
+            
+            articlesDiv.innerHTML = '<div class="loading">🔄 正在加载文章...</div>'
+            
+            try {
+                console.log('🔄 开始获取文章数据...')
+                
+                const response = await fetch(`${supabaseUrl}/rest/v1/articles?select=*,categories(name)&is_published=eq.true&order=created_at.desc&limit=6`, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Accept': 'application/json'
+                    }
+                })
+
+                console.log('📡 请求状态:', response.status)
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+                }
+
+                const articles = await response.json()
+                console.log('✅ 获取到的文章数据:', articles)
+
+                if (articles.length === 0) {
+                    articlesDiv.innerHTML = `
+                        <div class="error">
+                            <h3>⚠️ 没有找到文章</h3>
+                            <p>数据库中没有已发布的文章，或者查询条件有问题。</p>
+                        </div>
+                    `
+                    status.innerHTML = '<div class="error">❌ 没有找到文章</div>'
+                    return
+                }
+
+                // 显示文章
+                articlesDiv.innerHTML = articles.map(article => `
+                    <div class="article-card">
+                        <div class="article-meta">
+                            <span class="category">${article.categories?.name || '未分类'}</span>
+                            <span class="date">${formatDate(article.created_at)}</span>
+                        </div>
+                        <h3 class="title">${article.title}</h3>
+                        <p class="summary">${article.summary || (article.content ? article.content.substring(0, 100) + '...' : '暂无摘要')}</p>
+                        <div class="views">👁️ ${article.view_count || 0} 阅读</div>
+                    </div>
+                `).join('')
+
+                status.innerHTML = `<div class="success">✅ 成功加载 ${articles.length} 篇文章</div>`
+                
+            } catch (error) {
+                console.error('❌ 加载失败:', error)
+                articlesDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ 加载失败</h3>
+                        <p><strong>错误信息:</strong> ${error.message}</p>
+                        <p><strong>可能的原因:</strong></p>
+                        <ul>
+                            <li>网络连接问题</li>
+                            <li>Supabase服务器错误</li>
+                            <li>API密钥无效</li>
+                            <li>CORS权限问题</li>
+                        </ul>
+                        <button onclick="loadArticles()">重试</button>
+                    </div>
+                `
+                status.innerHTML = `<div class="error">❌ 加载失败: ${error.message}</div>`
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '未知日期'
+            const date = new Date(dateString)
+            return date.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            })
+        }
+
+        // 页面加载时自动加载文章和检查连接
+        window.onload = function() {
+            checkConnection()
+            loadArticles()
+        }
+    </script>
+</body>
+</html>

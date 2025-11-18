@@ -58,9 +58,22 @@
       <p>加载中...</p>
     </div>
 
+    <!-- 错误状态 -->
+    <div v-else-if="showError" class="error-state">
+      <div class="error-message">
+        <h3>⚠️ 加载失败</h3>
+        <p>{{ errorMessage }}</p>
+        <button @click="loadArticles" class="retry-btn">重试</button>
+      </div>
+    </div>
+
     <!-- 空状态 -->
     <div v-else class="empty-state">
-      <p>暂无文章</p>
+      <div class="empty-message">
+        <h3>📝 暂无文章</h3>
+        <p>当前筛选条件下没有找到文章</p>
+        <button @click="clearFilter" class="clear-filter-btn">清除筛选</button>
+      </div>
     </div>
 
     <!-- 分页 -->
@@ -99,7 +112,9 @@ export default {
       categories: [],
       selectedCategory: null,
       loading: false,
-      pagination: null
+      pagination: null,
+      showError: false,
+      errorMessage: ''
     }
   },
   async mounted() {
@@ -117,19 +132,47 @@ export default {
 
     async loadArticles(page = 1) {
       this.loading = true
+      this.showError = false
+      
       try {
+        console.log(`🔄 开始加载文章数据，页码: ${page}, 分类: ${this.selectedCategory || '全部'}`)
+        
         let articlesData
         
         if (this.selectedCategory) {
+          console.log('🏷️ 按分类筛选文章:', this.selectedCategory)
           articlesData = await apiService.getArticlesByCategory(this.selectedCategory, page)
         } else {
+          console.log('📝 获取所有文章')
           articlesData = await apiService.getArticles(page)
         }
         
-        this.articles = articlesData.list
+        console.log('✅ 文章数据获取成功:', {
+          count: articlesData.list?.length || 0,
+          total: articlesData.pagination?.total || 0,
+          page: articlesData.pagination?.pageNum
+        })
+        
+        this.articles = articlesData.list || []
         this.pagination = articlesData.pagination
+        
+        if (this.articles.length === 0) {
+          console.warn('⚠️ 当前筛选条件下没有找到文章')
+        }
+        
       } catch (error) {
-        console.error('加载文章失败:', error)
+        console.error('❌ 加载文章失败:', error)
+        console.error('错误详情:', {
+          message: error.message,
+          status: error.status,
+          details: error.details
+        })
+        
+        this.showError = true
+        this.errorMessage = error.message || '加载文章失败，请重试'
+        this.articles = []
+        this.pagination = null
+        
       } finally {
         this.loading = false
       }
@@ -368,11 +411,89 @@ export default {
 }
 
 /* 加载状态 */
-.loading, .empty-state {
+.loading {
   text-align: center;
   padding: 3rem;
   color: #64748b;
   font-size: 1.1rem;
+}
+
+/* 错误状态 */
+.error-state {
+  text-align: center;
+  padding: 3rem;
+}
+
+.error-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.error-message h3 {
+  color: #dc2626;
+  margin-bottom: 1rem;
+}
+
+.error-message p {
+  color: #991b1b;
+  margin-bottom: 1.5rem;
+}
+
+.retry-btn {
+  background: #dc2626;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+
+.retry-btn:hover {
+  opacity: 0.8;
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+}
+
+.empty-message {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.empty-message h3 {
+  color: #64748b;
+  margin-bottom: 1rem;
+}
+
+.empty-message p {
+  color: #94a3b8;
+  margin-bottom: 1.5rem;
+}
+
+.clear-filter-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+
+.clear-filter-btn:hover {
+  opacity: 0.8;
 }
 
 /* 响应式设计 */
