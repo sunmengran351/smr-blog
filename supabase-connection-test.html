@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase 连接测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+            background: #f8fafc;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .result {
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+        button:hover { opacity: 0.8; }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .article-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .article-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .category { background: #e0e7ff; color: #4f46e5; padding: 3px 8px; border-radius: 12px; }
+        .title { font-size: 18px; font-weight: bold; margin: 10px 0; }
+        .summary { color: #64748b; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔗 Supabase 连接测试</h1>
+        <p>这个页面测试数据库连接和文章显示功能</p>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <button onclick="testConnection()">🌐 测试连接</button>
+            <button onclick="testCategories()">📋 测试分类</button>
+            <button onclick="testArticles()">📝 测试文章</button>
+            <button onclick="clearResults()">🧹 清空结果</button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js'
+        
+        const results = document.getElementById('results')
+        const supabaseUrl = 'https://talufbfkwrdrpwbzurcu.supabase.co'
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhbHVmYmZrd3JkcnB3Ynp1cmN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNjMxODUsImV4cCI6MjA3ODkzOTE4NX0.tpBu2CSiKJo0Z-YjPcF2Oey8qyhPlinuzJA6Ld8CTo0'
+        
+        const supabase = createClient(supabaseUrl, supabaseKey)
+        
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div')
+            div.className = `result ${type}`
+            div.innerHTML = message
+            results.appendChild(div)
+            console.log(message)
+        }
+        
+        function addDataResult(title, data) {
+            addResult(`<strong>${title}:</strong><pre>${JSON.stringify(data, null, 2)}</pre>`, 'info')
+        }
+        
+        window.testConnection = async function() {
+            addResult('🔄 开始测试Supabase连接...', 'info')
+            
+            try {
+                const { data, error } = await supabase.from('categories').select('*').limit(1)
+                
+                if (error) {
+                    addResult(`❌ 连接失败: ${error.message}`, 'error')
+                    addDataResult('错误详情', error)
+                } else {
+                    addResult('✅ Supabase连接成功！', 'success')
+                    addDataResult('连接配置', {
+                        url: supabaseUrl,
+                        hasKey: !!supabaseKey,
+                        keyLength: supabaseKey.length
+                    })
+                }
+            } catch (err) {
+                addResult(`💥 连接异常: ${err.message}`, 'error')
+                addDataResult('异常详情', err)
+            }
+        }
+        
+        window.testCategories = async function() {
+            addResult('📋 开始测试分类查询...', 'info')
+            
+            try {
+                const { data, error } = await supabase
+                    .from('categories')
+                    .select('*')
+                    .order('name')
+                
+                if (error) {
+                    addResult(`❌ 分类查询失败: ${error.message}`, 'error')
+                } else {
+                    addResult(`✅ 成功获取 ${data.length} 个分类`, 'success')
+                    
+                    data.forEach(category => {
+                        addResult(`
+                            <strong>📁 ${category.name}</strong><br>
+                            ${category.description || '暂无描述'}
+                        `, 'info')
+                    })
+                }
+            } catch (err) {
+                addResult(`💥 分类查询异常: ${err.message}`, 'error')
+            }
+        }
+        
+        window.testArticles = async function() {
+            addResult('📝 开始测试文章查询...', 'info')
+            
+            try {
+                const { data, error, count } = await supabase
+                    .from('articles')
+                    .select(`
+                        *,
+                        categories(name)
+                    `, { count: 'exact' })
+                    .eq('is_published', true)
+                    .order('created_at', { ascending: false })
+                    .limit(5)
+                
+                if (error) {
+                    addResult(`❌ 文章查询失败: ${error.message}`, 'error')
+                    addDataResult('错误详情', error)
+                } else {
+                    addResult(`✅ 成功获取 ${data.length} 篇文章 (总共 ${count} 篇)`, 'success')
+                    
+                    data.forEach(article => {
+                        addResult(`
+                            <div class="article-card">
+                                <div class="article-meta">
+                                    <span class="category">${article.categories?.name || '未分类'}</span>
+                                    <span>${formatDate(article.created_at)}</span>
+                                </div>
+                                <div class="title">${article.title}</div>
+                                <div class="summary">${article.summary || (article.content ? article.content.substring(0, 100) + '...' : '暂无摘要')}</div>
+                                <small>👁️ ${article.view_count || 0} 阅读</small>
+                            </div>
+                        `, 'info')
+                    })
+                }
+            } catch (err) {
+                addResult(`💥 文章查询异常: ${err.message}`, 'error')
+            }
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return '未知日期'
+            const date = new Date(dateString)
+            return date.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            })
+        }
+        
+        window.clearResults = function() {
+            results.innerHTML = ''
+        }
+        
+        // 页面加载时自动测试连接
+        window.addEventListener('load', () => {
+            setTimeout(testConnection, 500)
+        })
+    </script>
+</body>
+</html>

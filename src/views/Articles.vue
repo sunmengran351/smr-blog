@@ -102,7 +102,7 @@
 </template>
 
 <script>
-import { apiService } from '../services/supabase'
+import apiServiceFixed from '../services/supabase-fixed'
 
 export default {
   name: 'Articles',
@@ -124,9 +124,11 @@ export default {
   methods: {
     async loadCategories() {
       try {
-        this.categories = await apiService.getCategories()
+        console.log('🔄 Articles页面开始加载分类...')
+        this.categories = await apiServiceFixed.getCategories()
+        console.log('✅ Articles页面分类加载完成:', this.categories.length, '个')
       } catch (error) {
-        console.error('加载分类失败:', error)
+        console.error('❌ Articles页面加载分类失败:', error)
       }
     },
 
@@ -141,10 +143,10 @@ export default {
         
         if (this.selectedCategory) {
           console.log('🏷️ 按分类筛选文章:', this.selectedCategory)
-          articlesData = await apiService.getArticlesByCategory(this.selectedCategory, page)
+          articlesData = await apiServiceFixed.getArticlesByCategory(this.selectedCategory, page)
         } else {
           console.log('📝 获取所有文章')
-          articlesData = await apiService.getArticles(page)
+          articlesData = await apiServiceFixed.getArticles(page)
         }
         
         console.log('✅ 文章数据获取成功:', {

@@ -73,7 +73,7 @@
 </template>
 
 <script>
-import { apiService } from '../services/supabase'
+import apiServiceFixed from '../services/supabase-fixed'
 
 export default {
   name: 'Home',
@@ -101,7 +101,7 @@ export default {
         
         // 加载最新文章
         console.log('📝 正在获取文章数据...')
-        const articlesData = await apiService.getArticles(1, 3)
+        const articlesData = await apiServiceFixed.getArticles(1, 3)
         console.log('✅ 文章数据获取成功:', articlesData)
         
         this.articles = articlesData.list || []
@@ -109,7 +109,7 @@ export default {
         
         // 加载分类
         console.log('🏷️ 正在获取分类数据...')
-        const categoriesData = await apiService.getCategories()
+        const categoriesData = await apiServiceFixed.getCategories()
         console.log('✅ 分类数据获取成功:', categoriesData)
         
         this.categories = categoriesData || []
