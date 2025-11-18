@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>调试测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .info { background: #f0f8ff; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .success { background: #d4edda; color: #155724; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .error { background: #f8d7da; color: #721c24; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 博客文章显示问题调试</h1>
+    
+    <div class="info">
+        <h3>📋 调试步骤</h3>
+        <ol>
+            <li>检查环境变量是否正确设置</li>
+            <li>测试Supabase连接</li>
+            <li>查看具体错误信息</li>
+        </ol>
+    </div>
+
+    <button onclick="testConnection()">🔗 测试Supabase连接</button>
+    <button onclick="testArticles()">📝 测试获取文章</button>
+    <button onclick="checkEnvironment()">⚙️ 检查环境变量</button>
+
+    <div id="results"></div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js'
+        
+        const results = document.getElementById('results')
+        
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div')
+            div.className = `result ${type}`
+            div.innerHTML = message
+            results.appendChild(div)
+            return div
+        }
+        
+        function addDataResult(title, data) {
+            const div = document.createElement('div')
+            div.className = 'result info'
+            div.innerHTML = `<strong>${title}:</strong><pre>${JSON.stringify(data, null, 2)}</pre>`
+            results.appendChild(div)
+            return div
+        }
+        
+        window.checkEnvironment = function() {
+            addResult('🔍 检查环境变量...', 'info')
+            
+            const envVars = {
+                VITE_SUPABASE_URL: 'https://talufbfkwrdrpwbzurcu.supabase.co',
+                VITE_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhbHVmYmZrd3JkcnB3Ynp1cmN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNjMxODUsImV4cCI6MjA3ODkzOTE4NX0.tpBu2CSiKJo0Z-YjPcF2Oey8qyhPlinuzJA6Ld8CTo0'
+            }
+            
+            addResult('✅ 环境变量配置示例', 'success')
+            addDataResult('Netlify环境变量配置', envVars)
+            
+            addResult(`
+                <h3>🛠️ Netlify设置步骤：</h3>
+                <ol>
+                    <li>登录 <a href="https://app.netlify.com" target="_blank">Netlify</a></li>
+                    <li>选择你的博客站点</li>
+                    <li>进入 Site settings → Build & deploy → Environment</li>
+                    <li>点击 "Edit variables" 添加环境变量</li>
+                    <li>添加上面的两个环境变量</li>
+                    <li>保存后触发重新部署</li>
+                </ol>
+            `, 'info')
+        }
+        
+        window.testConnection = async function() {
+            addResult('🔗 测试Supabase连接...', 'info')
+            
+            try {
+                const supabaseUrl = 'https://talufbfkwrdrpwbzurcu.supabase.co'
+                const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhbHVmYmZrd3JkcnB3Ynp1cmN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNjMxODUsImV4cCI6MjA3ODkzOTE4NX0.tpBu2CSiKJo0Z-YjPcF2Oey8qyhPlinuzJA6Ld8CTo0'
+                
+                const supabase = createClient(supabaseUrl, supabaseKey)
+                addResult('✅ Supabase客户端初始化成功', 'success')
+                
+                // 测试连接
+                const { data, error } = await supabase.from('categories').select('*').limit(1)
+                if (error) {
+                    addResult(`❌ 连接失败: ${error.message}`, 'error')
+                    addDataResult('错误详情', error)
+                } else {
+                    addResult('✅ Supabase连接成功！', 'success')
+                    addDataResult('测试数据', data)
+                }
+            } catch (err) {
+                addResult(`❌ 连接异常: ${err.message}`, 'error')
+                addDataResult('异常详情', err)
+            }
+        }
+        
+        window.testArticles = async function() {
+            addResult('📝 测试获取文章...', 'info')
+            
+            try {
+                const supabaseUrl = 'https://talufbfkwrdrpwbzurcu.supabase.co'
+                const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhbHVmYmZrd3JkcnB3Ynp1cmN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNjMxODUsImV4cCI6MjA3ODkzOTE4NX0.tpBu2CSiKJo0Z-YjPcF2Oey8qyhPlinuzJA6Ld8CTo0'
+                
+                const supabase = createClient(supabaseUrl, supabaseKey)
+                
+                const { data, error, count } = await supabase
+                    .from('articles')
+                    .select(`
+                        *,
+                        categories(name)
+                    `, { count: 'exact' })
+                    .eq('is_published', true)
+                    .order('created_at', { ascending: false })
+                    .limit(3)
+                
+                if (error) {
+                    addResult(`❌ 获取文章失败: ${error.message}`, 'error')
+                    addDataResult('错误详情', error)
+                } else {
+                    addResult(`✅ 成功获取 ${count} 篇文章！`, 'success')
+                    addDataResult('文章数据', data)
+                    
+                    // 显示文章预览
+                    data.forEach((article, index) => {
+                        addResult(`
+                            <h4>📄 文章 ${index + 1}</h4>
+                            <p><strong>标题:</strong> ${article.title}</p>
+                            <p><strong>分类:</strong> ${article.categories?.name || '未分类'}</p>
+                            <p><strong>摘要:</strong> ${article.summary || article.content?.substring(0, 100) + '...'}</p>
+                            <p><strong>创建时间:</strong> ${article.created_at}</p>
+                            <hr>
+                        `, 'success')
+                    })
+                }
+            } catch (err) {
+                addResult(`❌ 获取文章异常: ${err.message}`, 'error')
+                addDataResult('异常详情', err)
+            }
+        }
+        
+        // 页面加载时自动检查环境变量
+        setTimeout(checkEnvironment, 1000)
+    </script>
+</body>
+</html>
