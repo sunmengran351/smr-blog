@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .test-section { 
+            background: #f8fafc; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin: 20px 0; 
+            border: 1px solid #e2e8f0;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 5px; 
+        }
+        pre { background: #f1f3f4; padding: 15px; border-radius: 4px; overflow-x: auto; }
+        .article { 
+            background: white; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 8px; 
+            border-left: 4px solid #007bff; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 简单API测试</h1>
+        <p>这个页面使用原生fetch测试Supabase API，不依赖外部模块</p>
+        
+        <button onclick="testArticles()">📝 测试文章API</button>
+        <button onclick="testCategories()">📋 测试分类API</button>
+        <button onclick="clearResults()">🧹 清空结果</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const API_URL = 'https://talufbfkwrdrpwbzurcu.supabase.co'
+        const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhbHVmYmZrd3JkcnB3Ynp1cmN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNjMxODUsImV4cCI6MjA3ODkzOTE4NX0.tpBu2CSiKJo0Z-YjPcF2Oey8qyhPlinuzJA6Ld8CTo0'
+
+        function showResult(title, data, isSuccess = true) {
+            const results = document.getElementById('results')
+            const section = document.createElement('div')
+            section.className = `test-section ${isSuccess ? 'success' : 'error'}`
+            section.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `
+            results.appendChild(section)
+            
+            // 滚动到最新结果
+            section.scrollIntoView({ behavior: 'smooth' })
+        }
+
+        function showArticlePreview(articles) {
+            const results = document.getElementById('results')
+            
+            articles.forEach(article => {
+                const preview = document.createElement('div')
+                preview.className = 'test-section info article'
+                preview.innerHTML = `
+                    <h4>📄 ${article.title}</h4>
+                    <p><strong>分类:</strong> ${article.categories?.name || '未分类'}</p>
+                    <p><strong>摘要:</strong> ${article.summary || '暂无摘要'}</p>
+                    <p><strong>创建时间:</strong> ${article.created_at}</p>
+                    <p><strong>阅读量:</strong> ${article.view_count || 0}</p>
+                    <p><strong>内容:</strong> ${article.content ? article.content.substring(0, 100) + '...' : '暂无内容'}</p>
+                `
+                results.appendChild(preview)
+            })
+        }
+
+        window.testArticles = async function() {
+            console.log('🔄 开始测试文章API...')
+            
+            try {
+                const response = await fetch(`${API_URL}/rest/v1/articles?select=*,categories(name)&is_published=eq.true&order=created_at.desc&limit=3`, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': API_KEY,
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                })
+
+                console.log('📡 响应状态:', response.status)
+                console.log('📡 响应头:', response.headers)
+
+                if (!response.ok) {
+                    const errorText = await response.text()
+                    throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`)
+                }
+
+                const articles = await response.json()
+                
+                console.log('✅ 获取到的文章:', articles)
+                
+                showResult('✅ 文章API测试成功', {
+                    文章数量: articles.length,
+                    数据: articles
+                }, true)
+                
+                // 显示文章预览
+                if (articles.length > 0) {
+                    showArticlePreview(articles)
+                } else {
+                    showResult('⚠️ 没有找到文章', '数据库中没有已发布的文章', false)
+                }
+
+            } catch (error) {
+                console.error('❌ 文章API测试失败:', error)
+                showResult('❌ 文章API测试失败', {
+                    错误信息: error.message,
+                    可能原因: [
+                        '网络连接问题',
+                        'API密钥无效',
+                        'CORS权限问题',
+                        'Supabase服务器错误'
+                    ]
+                }, false)
+            }
+        }
+
+        window.testCategories = async function() {
+            console.log('🔄 开始测试分类API...')
+            
+            try {
+                const response = await fetch(`${API_URL}/rest/v1/categories?select=*&order=name`, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': API_KEY,
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                })
+
+                if (!response.ok) {
+                    const errorText = await response.text()
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+                }
+
+                const categories = await response.json()
+                
+                console.log('✅ 获取到的分类:', categories)
+                
+                showResult('✅ 分类API测试成功', {
+                    分类数量: categories.length,
+                    数据: categories
+                }, true)
+
+            } catch (error) {
+                console.error('❌ 分类API测试失败:', error)
+                showResult('❌ 分类API测试失败', {
+                    错误信息: error.message
+                }, false)
+            }
+        }
+
+        window.clearResults = function() {
+            document.getElementById('results').innerHTML = ''
+        }
+
+        // 页面加载时自动测试文章API
+        window.addEventListener('load', function() {
+            console.log('🚀 页面加载完成，开始自动测试...')
+            setTimeout(testArticles, 1000)
+        })
+    </script>
+</body>
+</html>
